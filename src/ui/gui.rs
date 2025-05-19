@@ -905,25 +905,36 @@ impl eframe::App for RcpClientApp {
                             // Password input field with masking
                             ui.horizontal(|ui| {
                                 ui.label("Password:");
+                                
+                                // Store password and visibility state
                                 static mut PASSWORD: String = String::new();
+                                static mut SHOW_PASSWORD: bool = false;
+                                
                                 let password = unsafe { &mut PASSWORD };
-                                let mut show_password = false;
-                                let mut password_display = if !show_password {
+                                let show_password = unsafe { &mut SHOW_PASSWORD };
+                                
+                                // Create password display
+                                let mut password_display = if !*show_password {
                                     "•".repeat(password.len())
                                 } else {
                                     password.clone()
                                 };
+                                
                                 let password_edit = ui.add(
                                     egui::TextEdit::singleline(&mut password_display)
-                                        .password(!show_password)
+                                        .password(!*show_password)
                                         .hint_text("Enter password")
                                 );
-                                if password_edit.changed() && show_password {
+                                
+                                if password_edit.changed() && *show_password {
                                     *password = password_display.clone();
                                 }
-                                if ui.button(if show_password { "🙈" } else { "👁" }).clicked() {
-                                    show_password = !show_password;
+                                
+                                // Toggle password visibility with button
+                                if ui.button(if *show_password { "🙈" } else { "👁" }).clicked() {
+                                    *show_password = !*show_password;
                                 }
+                                
                                 password_edit.on_hover_text("Enter your password for authentication");
                             });
                             
