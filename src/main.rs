@@ -32,6 +32,14 @@ struct Args {
     /// Authentication method (password, psk, native)
     #[clap(long, value_parser = ["password", "psk", "native"])]
     auth_method: Option<String>,
+
+    /// Connect in background (don't force connection on startup)
+    #[clap(long, action)]
+    background_connect: bool,
+
+    /// Use event-based UI implementation
+    #[clap(long, action)]
+    event_based: bool,
 }
 
 #[tokio::main]
@@ -61,8 +69,18 @@ async fn main() -> Result<()> {
             .join("config.toml")
     });
 
-    let mut config = config::load_config(&config_path).await?;
-    info!("Configuration loaded from {:?}", config_path);
+    // Try to load configuration, but use defaults if it fails
+    let mut config = match config::load_config(&config_path).await {
+        Ok(config) => {
+            info!("Configuration loaded from {:?}", config_path);
+            config
+        }
+        Err(e) => {
+            log::warn!("Failed to load configuration: {}", e);
+            log::info!("Using default configuration");
+            config::ClientConfig::default()
+        }
+    };
 
     // Override configuration with command-line arguments
     if let Some(server) = args.server {
@@ -77,63 +95,21 @@ async fn main() -> Result<()> {
         config.auth.method = auth_method;
     }
 
-    // Connect to the server
-    info!(
-        "Connecting to server {}:{}",
-        config.server.address, config.server.port
-    );
-    let client = match protocol::Client::connect(&config.server.address, config.server.port).await {
-        Ok(client) => {
-            info!("Connected to server");
-            client
-        }
-        Err(e) => {
-            log::error!("Failed to connect to server: {}", e);
-            return Err(e.into());
-        }
-    };
+    // Pass the background_connect flag to the UI
+    config.ui.auto_connect = !args.background_connect;
 
-    // Authenticate with the server
-    let username = config.auth.username.clone().unwrap_or_else(|| {
-        // Try to get the current OS username
-        std::env::var("USER")
-            .or_else(|_| std::env::var("USERNAME"))
-            .unwrap_or_else(|_| "user".to_string())
-    });
-
-    let auth_method = match auth::AuthMethod::from_str(&config.auth.method) {
-        Some(method) => method,
-        None => {
-            log::warn!(
-                "Unknown authentication method: {}, falling back to password",
-                config.auth.method
-            );
-            auth::AuthMethod::Password
-        }
-    };
-
-    info!("Authenticating with method: {}", auth_method);
-    let auth_provider = auth::create_provider(auth_method, &username);
-
-    match client.authenticate_with_provider(&*auth_provider).await {
-        Ok(true) => {
-            info!("Authentication successful");
-        }
-        Ok(false) => {
-            log::error!("Authentication failed");
-            return Err(anyhow::anyhow!("Authentication failed"));
-        }
-        Err(e) => {
-            log::error!("Authentication error: {}", e);
-            return Err(e);
-        }
+    // Decide which app implementation to use based on the command-line flag
+    if args.event_based {
+        info!("Using event-based UI implementation");
+        // Initialize the event-based UI
+        let app = ui::EventBasedApp::new(config.clone(), !args.background_connect);
+        app.run().await?;
+    } else {
+        info!("Using simple UI implementation");
+        // Initialize the simple UI
+        let app = ui::App::new(config.clone())?;
+        app.run().await?;
     }
-
-    // Initialize the UI
-    let app = ui::App::new(config)?;
-
-    // Run the application
-    app.run().await?;
 
     Ok(())
 }

@@ -77,6 +77,15 @@ pub struct UiConfig {
 
     /// Custom theme name
     pub theme: Option<String>,
+
+    /// Whether to automatically connect on startup
+    #[serde(default = "default_auto_connect")]
+    pub auto_connect: bool,
+}
+
+/// Default value for auto_connect
+fn default_auto_connect() -> bool {
+    true
 }
 
 /// Load configuration from a file
@@ -155,6 +164,7 @@ impl Default for UiConfig {
             start_minimized: false,
             scale_factor: 1.0,
             theme: None,
+            auto_connect: true,
         }
     }
 }

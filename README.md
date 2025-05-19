@@ -8,6 +8,8 @@ A Rust-based client application for the Remote Control Protocol (RCP) project.
 - Skia-based graphics rendering
 - Cross-platform support (Windows, macOS, Linux)
 - Secure client-server communication
+- Flexible connection handling (auto-connect or user-initiated)
+- Multiple UI implementation options
 
 ## Building
 
@@ -42,69 +44,77 @@ RUST_LOG=debug ./target/release/rust_rcp_client
 
 # Use a specific authentication method
 ./target/release/rust_rcp_client --auth-method native
-```
 
-## Authentication Methods
+# Don't connect automatically on startup
+./target/release/rust_rcp_client --background-connect
 
-### Native OS Authentication
+# Use the event-based UI implementation
+./target/release/rust_rcp_client --event-based
 
-Uses the host operating system's authentication mechanisms:
-- On Windows: Windows Security Support Provider Interface (SSPI)
-- On macOS: Directory Services API and optional Touch ID
-- On Linux: Pluggable Authentication Modules (PAM)
-
-```bash
-./target/release/rust_rcp_client --auth-method native
-```
-
-### Password Authentication
-
-Simple username/password authentication:
-
-```bash
-./target/release/rust_rcp_client --auth-method password --username your_username
-```
-
-### Pre-Shared Key (PSK) Authentication
-
-Use a pre-shared key for authentication:
-
-```bash
-./target/release/rust_rcp_client --auth-method psk
+# Use the provided script with options
+./scripts/run_client.sh --auth=native --server=192.168.1.100 --username=user --background --event-based
 ```
 
 ## Configuration
 
-The client can be configured using a TOML configuration file. By default, the client looks for a configuration file at:
+The client can be configured using a TOML configuration file. By default, the client looks for the configuration file at `~/.config/rcp_client/config.toml` (on Linux/macOS) or `%APPDATA%\rcp_client\config.toml` (on Windows).
 
-- Windows: `%APPDATA%\rcp_client\config.toml`
-- macOS: `~/Library/Application Support/rcp_client/config.toml`
-- Linux: `~/.config/rcp_client/config.toml`
-
-You can also specify a configuration file using the `--config` option:
+You can specify a custom configuration file path with the `--config` option:
 
 ```bash
-./target/release/rust_rcp_client --config /path/to/config.toml
+./target/release/rust_rcp_client --config /path/to/my-config.toml
 ```
 
-Example configuration:
+### Example Configuration
 
 ```toml
+# Server configuration
 [server]
 address = "192.168.1.100"
-port = 8717
-use_tls = false
+port = 5555
+use_tls = true
+verify_server = true
+client_cert_path = "/path/to/client.crt"
+client_key_path = "/path/to/client.key"
 
+# Authentication configuration
 [auth]
 method = "native"
 username = "user"
 save_credentials = true
 use_native_auth = true
 
+# UI configuration
 [ui]
 dark_mode = true
+start_minimized = false
 scale_factor = 1.0
+theme = "default"
+auto_connect = true  # Whether to connect automatically on startup
 ```
+
+## UI Implementations
+
+The client supports two different UI implementations:
+
+1. **Simple UI** (default): A basic UI implementation that connects directly and handles simple interaction
+2. **Event-Based UI**: A more complex event-driven implementation that provides more flexibility
+
+You can switch between implementations using the `--event-based` flag when running the client.
+
+## Command-Line Options
+
+| Option | Description |
+|--------|-------------|
+| `--config FILE` | Path to the configuration file |
+| `--server ADDRESS` | Server address to connect to |
+| `--username USER` | Username for authentication |
+| `--auth-method METHOD` | Authentication method (password, psk, native) |
+| `--background-connect` | Don't connect automatically on startup |
+| `--event-based` | Use the event-based UI implementation |
+| `--verbose` | Enable verbose logging (can be repeated for more detail) |
+| `--help` | Show help information |
+| `--version` | Show version information |
 
 ## License
 
