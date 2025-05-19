@@ -23,6 +23,12 @@ enum AppEvent {
     AuthenticationSucceeded,
     /// Authentication failed
     AuthenticationFailed(String),
+    /// Config saved
+    ConfigSaved,
+    /// Config save failed
+    ConfigSaveFailed(String),
+    /// Update UI status
+    UpdateStatus(String),
 }
 
 /// RCP Client GUI Application
@@ -45,6 +51,8 @@ pub struct RcpClientApp {
     event_tx: mpsc::Sender<AppEvent>,
     /// Client instance
     client: Arc<Mutex<Option<protocol::Client>>>,
+    /// Status instance for thread-safe updates
+    status: Arc<Mutex<String>>,
     /// Tokio runtime handle
     rt_handle: Handle,
     /// Shutdown channel
@@ -61,11 +69,13 @@ impl RcpClientApp {
     ) -> Self {
         let (event_tx, mut event_rx) = mpsc::channel(32);
         let client = Arc::new(Mutex::new(None));
+        let status = Arc::new(Mutex::new("Disconnected".to_string()));
         
         // Clone necessary values for the event handler
         let event_tx_clone = event_tx.clone();
         let client_clone = client.clone();
         let config_clone = config.clone();
+        let status_clone = status.clone();
         
         // Spawn async task to handle events on the runtime
         rt_handle.spawn(async move {
@@ -123,18 +133,41 @@ impl RcpClientApp {
                     }
                     AppEvent::ConnectionFailed(error) => {
                         error!("Connection failed: {}", error);
+                        // Update status
+                        let _ = event_tx_clone.send(AppEvent::UpdateStatus(format!("Connection failed: {}", error))).await;
                     }
                     AppEvent::AuthenticationSucceeded => {
                         info!("Authentication succeeded");
+                        // Update status
+                        let _ = event_tx_clone.send(AppEvent::UpdateStatus("Connected and authenticated".to_string())).await;
                     }
                     AppEvent::AuthenticationFailed(error) => {
                         error!("Authentication failed: {}", error);
+                        // Update status
+                        let _ = event_tx_clone.send(AppEvent::UpdateStatus(format!("Authentication failed: {}", error))).await;
                     }
                     AppEvent::Disconnect => {
                         if let Some(_client) = client_clone.lock().await.take() {
                             info!("Disconnecting from server");
                             // Ideal implementation would call client.close() here
                         }
+                    }
+                    AppEvent::ConfigSaved => {
+                        info!("Configuration saved successfully");
+                        
+                        // Update the UI status
+                        let _ = event_tx_clone.send(AppEvent::UpdateStatus("Configuration saved".to_string())).await;
+                    }
+                    AppEvent::ConfigSaveFailed(error) => {
+                        error!("Failed to save configuration: {}", error);
+                        
+                        // Update the UI status
+                        let _ = event_tx_clone.send(AppEvent::UpdateStatus(format!("Config save failed: {}", error))).await;
+                    }
+                    AppEvent::UpdateStatus(status) => {
+                        // Update the shared status
+                        let mut status_guard = status_clone.lock().await;
+                        *status_guard = status;
                     }
                 }
             }
@@ -151,6 +184,7 @@ impl RcpClientApp {
             auto_connect,
             event_tx,
             client,
+            status,
             rt_handle,
             shutdown_tx: Some(shutdown_tx),
         };
@@ -203,14 +237,44 @@ impl RcpClientApp {
             .join("rcp_client")
             .join("config.toml");
         
-        // Save config using the runtime handle
-        self.rt_handle.block_on(crate::config::save_config(&config_path, &self.config))?;
+        // Instead of using block_on, we'll spawn a task to save the config
+        let config = self.config.clone();
+        let tx = self.event_tx.clone(); // For reporting results
+        
+        self.rt_handle.spawn(async move {
+            match crate::config::save_config(&config_path, &config).await {
+                Ok(_) => {
+                    let _ = tx.send(AppEvent::ConfigSaved).await;
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    error!("Failed to save config: {}", error_msg);
+                    let _ = tx.send(AppEvent::ConfigSaveFailed(error_msg)).await;
+                }
+            }
+        });
+        
+        // Return immediately - the UI will be updated when the event is processed
         Ok(())
     }
 }
 
 impl eframe::App for RcpClientApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Check for status updates
+        let rt_handle = self.rt_handle.clone();
+        let status = self.status.clone();
+        
+        // Use a scoped future to avoid blocking
+        rt_handle.block_on(async {
+            if let Ok(guard) = status.try_lock() {
+                // If we can get the lock, update the UI status
+                if self.connection_status != *guard {
+                    self.connection_status = guard.clone();
+                }
+            }
+        });
+        
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("RCP Client");
             
@@ -259,7 +323,8 @@ impl eframe::App for RcpClientApp {
                     if let Err(e) = self.save_config() {
                         self.update_status(format!("Error saving config: {}", e));
                     } else {
-                        self.update_status("Connecting...".to_string());
+                        self.update_status("Saving config and connecting...".to_string());
+                        // Connect is triggered asynchronously after config save
                         self.connect();
                     }
                 }
@@ -271,9 +336,9 @@ impl eframe::App for RcpClientApp {
                 
                 if ui.button("Save Config").clicked() {
                     if let Err(e) = self.save_config() {
-                        self.update_status(format!("Error saving config: {}", e));
+                        self.update_status(format!("Error initiating config save: {}", e));
                     } else {
-                        self.update_status("Configuration saved".to_string());
+                        self.update_status("Saving configuration...".to_string());
                     }
                 }
             });
