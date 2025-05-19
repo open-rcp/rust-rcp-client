@@ -8,4 +8,4 @@ export RUST_LOG=info
 cargo build --release
 
 # Run the client with native authentication
-./target/release/rcp_client_rust --auth-method native
+./target/release/rust_rcp_client --auth-method native

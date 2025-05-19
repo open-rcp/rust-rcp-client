@@ -1,5 +1,5 @@
 [package]
-name = "rcp_client_rust"
+name = "rust_rcp_client"
 version = "0.1.0"
 edition = "2021"
 authors = ["Open RCP Contributors"]

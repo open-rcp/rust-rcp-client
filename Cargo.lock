@@ -2076,37 +2076,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2ff9a1f06a88b01621b7ae906ef0211290d1c8a168a15542486a8f61c0833b9"
 
 [[package]]
-name = "rcp_client_rust"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "clap",
- "core-foundation",
- "cosmic-text",
- "dirs",
- "env_logger",
- "keyring",
- "libc",
- "log",
- "nix 0.26.4",
- "objc",
- "os_info",
- "rand",
- "raw-window-handle",
- "serde",
- "serde_json",
- "skia-safe",
- "thiserror",
- "tiny-skia 0.11.4",
- "tokio",
- "toml",
- "uuid",
- "windows",
- "winit",
-]
-
-[[package]]
 name = "read-fonts"
 version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2186,6 +2155,37 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rust_rcp_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "clap",
+ "core-foundation",
+ "cosmic-text",
+ "dirs",
+ "env_logger",
+ "keyring",
+ "libc",
+ "log",
+ "nix 0.26.4",
+ "objc",
+ "os_info",
+ "rand",
+ "raw-window-handle",
+ "serde",
+ "serde_json",
+ "skia-safe",
+ "thiserror",
+ "tiny-skia 0.11.4",
+ "tokio",
+ "toml",
+ "uuid",
+ "windows",
+ "winit",
 ]
 
 [[package]]

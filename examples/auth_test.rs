@@ -1,6 +1,6 @@
 use anyhow::Result;
-use rcp_client_rust::auth::{create_provider, AuthMethod};
-use rcp_client_rust::protocol::Client;
+use rust_rcp_client::auth::{create_provider, AuthMethod};
+use rust_rcp_client::protocol::Client;
 
 #[tokio::main]
 async fn main() -> Result<()> {

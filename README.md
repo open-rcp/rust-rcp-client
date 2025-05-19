@@ -21,8 +21,8 @@ A Rust-based client application for the Remote Control Protocol (RCP) project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/open-rcp/rcp_client_rust.git
-cd rcp_client_rust
+git clone https://github.com/open-rcp/rust_rcp_client.git
+cd rust_rcp_client
 
 # Build the client
 cargo build --release
@@ -32,16 +32,16 @@ cargo build --release
 
 ```bash
 # Run with default settings
-./target/release/rcp_client_rust
+./target/release/rust_rcp_client
 
 # Run with verbose logging
-RUST_LOG=debug ./target/release/rcp_client_rust
+RUST_LOG=debug ./target/release/rust_rcp_client
 
 # Connect to a specific server
-./target/release/rcp_client_rust --server 192.168.1.100
+./target/release/rust_rcp_client --server 192.168.1.100
 
 # Use a specific authentication method
-./target/release/rcp_client_rust --auth-method native
+./target/release/rust_rcp_client --auth-method native
 ```
 
 ## Authentication Methods
@@ -54,7 +54,7 @@ Uses the host operating system's authentication mechanisms:
 - On Linux: Pluggable Authentication Modules (PAM)
 
 ```bash
-./target/release/rcp_client_rust --auth-method native
+./target/release/rust_rcp_client --auth-method native
 ```
 
 ### Password Authentication
@@ -62,7 +62,7 @@ Uses the host operating system's authentication mechanisms:
 Simple username/password authentication:
 
 ```bash
-./target/release/rcp_client_rust --auth-method password --username your_username
+./target/release/rust_rcp_client --auth-method password --username your_username
 ```
 
 ### Pre-Shared Key (PSK) Authentication
@@ -70,7 +70,7 @@ Simple username/password authentication:
 Use a pre-shared key for authentication:
 
 ```bash
-./target/release/rcp_client_rust --auth-method psk
+./target/release/rust_rcp_client --auth-method psk
 ```
 
 ## Configuration
@@ -84,7 +84,7 @@ The client can be configured using a TOML configuration file. By default, the cl
 You can also specify a configuration file using the `--config` option:
 
 ```bash
-./target/release/rcp_client_rust --config /path/to/config.toml
+./target/release/rust_rcp_client --config /path/to/config.toml
 ```
 
 Example configuration:
