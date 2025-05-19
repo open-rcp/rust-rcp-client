@@ -11,6 +11,7 @@ USERNAME=""
 BACKGROUND_CONNECT=false
 VERBOSE=false
 EVENT_BASED=false
+GUI=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -39,6 +40,10 @@ while [[ $# -gt 0 ]]; do
       EVENT_BASED=true
       shift
       ;;
+    --gui)
+      GUI=true
+      shift
+      ;;
     --help)
       echo "Usage: $0 [options]"
       echo "Options:"
@@ -47,6 +52,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --username=USER     Username for authentication"
       echo "  --background        Don't connect automatically on startup"
       echo "  --event-based       Use the event-based UI implementation"
+      echo "  --gui               Use the graphical user interface"
       echo "  --verbose           Enable verbose logging"
       echo "  --help              Show this help message"
       exit 0
@@ -83,6 +89,10 @@ fi
 
 if [ "$EVENT_BASED" = true ]; then
   ARGS+=("--event-based")
+fi
+
+if [ "$GUI" = true ]; then
+  ARGS+=("--gui")
 fi
 
 # Run the client with the specified options

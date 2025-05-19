@@ -40,6 +40,10 @@ struct Args {
     /// Use event-based UI implementation
     #[clap(long, action)]
     event_based: bool,
+    
+    /// Use graphical user interface
+    #[clap(long, action)]
+    gui: bool,
 }
 
 #[tokio::main]
@@ -98,8 +102,12 @@ async fn main() -> Result<()> {
     // Pass the background_connect flag to the UI
     config.ui.auto_connect = !args.background_connect;
 
-    // Decide which app implementation to use based on the command-line flag
-    if args.event_based {
+    // Decide which UI implementation to use based on the command-line flags
+    if args.gui {
+        info!("Using graphical UI implementation");
+        // Initialize the GUI
+        ui::run_gui(config.clone(), !args.background_connect)?;
+    } else if args.event_based {
         info!("Using event-based UI implementation");
         // Initialize the event-based UI
         let app = ui::EventBasedApp::new(config.clone(), !args.background_connect);

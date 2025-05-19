@@ -27,6 +27,8 @@ tiny-skia = "0.11"  # Pure Rust alternative for small rendering tasks
 winit = "0.28"      # Window handling
 raw-window-handle = "0.5"
 cosmic-text = "0.9" # Text layout and rendering
+egui = "0.24.0"     # Simple immediate mode GUI
+eframe = "0.24.0"   # egui framework
 
 # Native OS integration for authentication
 keyring = "2.0"     # For secure credential storage

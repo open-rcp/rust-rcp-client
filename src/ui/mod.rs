@@ -6,7 +6,9 @@ use log::{error, info, warn};
 use tokio::sync::oneshot;
 
 mod event_app;
+mod gui;
 pub use event_app::EventBasedApp;
+pub use gui::run_gui;
 
 /// Main application UI
 pub struct App {

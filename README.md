@@ -5,11 +5,11 @@ A Rust-based client application for the Remote Control Protocol (RCP) project.
 ## Features
 
 - Native operating system authentication support
-- Skia-based graphics rendering
 - Cross-platform support (Windows, macOS, Linux)
 - Secure client-server communication
 - Flexible connection handling (auto-connect or user-initiated)
-- Multiple UI implementation options
+- Multiple UI implementation options (text-based and graphical)
+- Optional graphical user interface with egui
 
 ## Building
 
@@ -51,8 +51,11 @@ RUST_LOG=debug ./target/release/rust_rcp_client
 # Use the event-based UI implementation
 ./target/release/rust_rcp_client --event-based
 
+# Use the graphical user interface
+./target/release/rust_rcp_client --gui
+
 # Use the provided script with options
-./scripts/run_client.sh --auth=native --server=192.168.1.100 --username=user --background --event-based
+./scripts/run_client.sh --auth=native --server=192.168.1.100 --username=user --background --gui
 ```
 
 ## Configuration
@@ -95,12 +98,13 @@ auto_connect = true  # Whether to connect automatically on startup
 
 ## UI Implementations
 
-The client supports two different UI implementations:
+The client supports three different UI implementations:
 
-1. **Simple UI** (default): A basic UI implementation that connects directly and handles simple interaction
-2. **Event-Based UI**: A more complex event-driven implementation that provides more flexibility
+1. **Simple UI** (default): A basic text-based implementation that connects directly and handles simple interaction
+2. **Event-Based UI**: A more complex event-driven text-based implementation that provides more flexibility
+3. **GUI**: A graphical user interface implementation using the egui toolkit
 
-You can switch between implementations using the `--event-based` flag when running the client.
+You can switch between implementations using the `--event-based` or `--gui` flags when running the client.
 
 ## Command-Line Options
 
@@ -112,6 +116,7 @@ You can switch between implementations using the `--event-based` flag when runni
 | `--auth-method METHOD` | Authentication method (password, psk, native) |
 | `--background-connect` | Don't connect automatically on startup |
 | `--event-based` | Use the event-based UI implementation |
+| `--gui` | Use the graphical user interface |
 | `--verbose` | Enable verbose logging (can be repeated for more detail) |
 | `--help` | Show help information |
 | `--version` | Show version information |
