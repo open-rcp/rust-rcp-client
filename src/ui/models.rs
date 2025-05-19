@@ -6,6 +6,9 @@ pub struct AppState {
     pub is_connected: bool,
     pub connecting: bool,
     pub connection_status: String,
+    pub password: String,
+    pub show_password: bool,
+    pub last_validated_address: Option<String>,
 }
 
 impl AppState {
@@ -14,6 +17,9 @@ impl AppState {
             is_connected: false,
             connecting: false,
             connection_status: "Disconnected".to_string(),
+            password: String::new(),
+            show_password: false,
+            last_validated_address: None,
         }
     }
 }

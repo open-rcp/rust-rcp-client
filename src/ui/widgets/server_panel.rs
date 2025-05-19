@@ -1,10 +1,11 @@
 use eframe::egui;
-use log::info;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use crate::ui::events::AppEvent;
-use crate::ui::history::{load_connection_history, save_connection_history};
-use crate::ui::models::ConnectionEntry;
+use crate::ui::history::save_connection_history;
+use crate::ui::models::{AppState, ConnectionEntry};
 
 /// Draw the server configuration panel
 pub fn draw_server_panel(
@@ -15,6 +16,7 @@ pub fn draw_server_panel(
     event_tx: &mpsc::Sender<AppEvent>,
     rt_handle: &Handle,
     connection_history: &[ConnectionEntry],
+    app_state: &Arc<Mutex<AppState>>,
 ) {
     egui::CollapsingHeader::new("Server Configuration")
         .default_open(true)
@@ -66,17 +68,33 @@ pub fn draw_server_panel(
                     let valid_address = !server_address.contains(' ');
                     if valid_address {
                         ui.colored_label(egui::Color32::GREEN, "✓");
-                        static mut LAST_VALIDATED: Option<String> = None;
-                        unsafe {
-                            if changed {
-                                if LAST_VALIDATED.as_deref() != Some(server_address) {
-                                    let tx = event_tx.clone();
-                                    let address = server_address.clone();
-                                    LAST_VALIDATED = Some(address.clone());
-                                    rt_handle.spawn(async move {
-                                        let _ = tx.send(AppEvent::ValidateInput("server_address".to_string())).await;
-                                    });
+                        
+                        // Check if we need to validate against the last validated address
+                        if changed {
+                            let state_mutex = app_state.clone();
+                            let current_address = server_address.clone();
+                            
+                            // Get last validated address using non-blocking approach
+                            let needs_validation = if let Ok(state) = state_mutex.try_lock() {
+                                state.last_validated_address.as_deref() != Some(&current_address)
+                            } else {
+                                // If we can't get a lock, assume we need validation
+                                true
+                            };
+                            
+                            if needs_validation {
+                                // Update last validated address and trigger validation
+                                let tx = event_tx.clone();
+                                let address = server_address.clone();
+                                
+                                // Try to update without blocking
+                                if let Ok(mut state) = state_mutex.try_lock() {
+                                    state.last_validated_address = Some(address.clone());
                                 }
+                                
+                                rt_handle.spawn(async move {
+                                    let _ = tx.send(AppEvent::ValidateInput("server_address".to_string())).await;
+                                });
                             }
                         }
                     } else {

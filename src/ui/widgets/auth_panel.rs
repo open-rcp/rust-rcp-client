@@ -1,7 +1,10 @@
 use eframe::egui;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use crate::ui::events::AppEvent;
+use crate::ui::models::AppState;
 
 /// Draw the authentication panel
 pub fn draw_auth_panel(
@@ -11,6 +14,7 @@ pub fn draw_auth_panel(
     remember_credentials: &mut bool,
     event_tx: &mpsc::Sender<AppEvent>,
     rt_handle: &Handle,
+    app_state: &Arc<Mutex<AppState>>,
 ) {
     egui::CollapsingHeader::new("Authentication")
         .default_open(true)
@@ -19,7 +23,6 @@ pub fn draw_auth_panel(
                 ui.label("Username:");
                 let response = ui.text_edit_singleline(username);
                 ui.label("").on_hover_text("Enter your username for authentication");
-                let changed = response.changed();
                 let focus_lost = response.lost_focus();
                 
                 if !username.is_empty() {
@@ -39,7 +42,7 @@ pub fn draw_auth_panel(
             ui.horizontal(|ui| {
                 ui.label("Method:");
                 let _auth_dropdown = egui::ComboBox::from_label("")
-                    .selected_text(auth_method)
+                    .selected_text(auth_method.as_str())
                     .show_ui(ui, |ui| {
                         ui.selectable_value(auth_method, "password".to_string(), "Password");
                         ui.selectable_value(auth_method, "psk".to_string(), "Pre-Shared Key");
@@ -73,33 +76,48 @@ pub fn draw_auth_panel(
                     ui.horizontal(|ui| {
                         ui.label("Password:");
                         
-                        // Store password and visibility state
-                        static mut PASSWORD: String = String::new();
-                        static mut SHOW_PASSWORD: bool = false;
+                        // Get password and visibility state from app state
+                        let state_mutex = app_state.clone();
+                        let mut password_display;
+                        let show_password;
                         
-                        let password = unsafe { &mut PASSWORD };
-                        let show_password = unsafe { &mut SHOW_PASSWORD };
-                        
-                        // Create password display
-                        let mut password_display = if !*show_password {
-                            "•".repeat(password.len())
-                        } else {
-                            password.clone()
-                        };
+                        // Only hold the lock for a short time - using non-blocking approach
+                        {
+                            // Try to lock without blocking
+                            if let Ok(state) = state_mutex.try_lock() {
+                                show_password = state.show_password;
+                                password_display = if !show_password {
+                                    "•".repeat(state.password.len())
+                                } else {
+                                    state.password.clone()
+                                };
+                            } else {
+                                // If we can't get the lock, use default values
+                                show_password = false;
+                                password_display = String::new();
+                            }
+                        }
                         
                         let password_edit = ui.add(
                             egui::TextEdit::singleline(&mut password_display)
-                                .password(!*show_password)
+                                .password(!show_password)
                                 .hint_text("Enter password")
                         );
                         
-                        if password_edit.changed() && *show_password {
-                            *password = password_display.clone();
+                        // Update password in app state if needed
+                        if password_edit.changed() && show_password {
+                            // Use non-blocking try_lock instead of block_on
+                            if let Ok(mut state) = state_mutex.try_lock() {
+                                state.password = password_display.clone();
+                            }
                         }
                         
                         // Toggle password visibility with button
-                        if ui.button(if *show_password { "🙈" } else { "👁" }).clicked() {
-                            *show_password = !*show_password;
+                        if ui.button(if show_password { "🙈" } else { "👁" }).clicked() {
+                            // Use non-blocking try_lock instead of block_on
+                            if let Ok(mut state) = state_mutex.try_lock() {
+                                state.show_password = !state.show_password;
+                            }
                         }
                         
                         password_edit.on_hover_text("Enter your password for authentication");

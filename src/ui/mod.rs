@@ -8,4 +8,5 @@ mod history;
 mod widgets;
 
 pub use event_app::EventBasedApp;
-pub use gui::run_gui;
+pub use app::run_gui;
+pub use app::App;
