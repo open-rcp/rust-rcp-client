@@ -1,13 +1,13 @@
-use crate::protocol;
 
 /// GUI Application events
+#[derive(Debug, Clone)]
 pub enum AppEvent {
     /// Connect to server
     Connect,
     /// Disconnect from server
     Disconnect,
     /// Connection succeeded
-    ConnectionSucceeded(protocol::Client),
+    ConnectionSucceeded, // Removed protocol::Client
     /// Connection failed
     ConnectionFailed(String),
     /// Authentication succeeded
@@ -18,6 +18,8 @@ pub enum AppEvent {
     ConfigSaved,
     /// Config save failed
     ConfigSaveFailed(String),
+    /// Disconnection Confirmed
+    DisconnectedConfirmed,
     /// Update UI status
     UpdateStatus(String),
     /// Update connection state
@@ -32,4 +34,8 @@ pub enum AppEvent {
     ClearCredentials,
     /// Validate input
     ValidateInput(String),
+    /// Save configuration
+    SaveConfig,
+    /// Update status with a message
+    StatusUpdate(String),
 }

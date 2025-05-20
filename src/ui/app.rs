@@ -25,7 +25,14 @@ impl App {
     /// Run the application
     pub async fn run(self) -> Result<()> {
         // Just delegate to the GUI implementation
-        run_gui(self.config.clone(), self.config.ui.auto_connect)
+        // The original run_gui took (ClientConfig, bool for auto_connect)
+        // The new RcpClientApp::new expects (egui::Context, ClientConfig, Handle, shutdown_tx)
+        // This needs to be refactored to align with how RcpClientApp is now initialized and run by eframe
+        // For now, let's assume the main.rs or lib.rs will set up eframe and RcpClientApp directly.
+        // This App struct might be deprecated or need significant changes.
+        // Temporarily, we'll make it a no-op or return an error to indicate it needs updating.
+        // run_gui(self.config.clone(), self.config.ui.auto_connect)
+        anyhow::bail!("App::run() needs to be refactored to use eframe and RcpClientApp directly.");
     }
 }
 
@@ -100,20 +107,27 @@ impl RcpClientApp {
     }
 
     fn update_ui(&mut self, ctx: &egui::Context) {
-        // Draw the main application UI
+        let app_state_locked = self.app_state.blocking_lock(); // Lock once
+        let is_connected = app_state_locked.is_connected;
+        let is_connecting = app_state_locked.connecting;
+        let status_message_from_state = app_state_locked.connection_status.clone(); // Assuming this exists
+        drop(app_state_locked); // Drop the lock
+
+        let _current_status = self.status.blocking_lock().clone(); // This is the main status string
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("RCP Client");
             ui.separator();
             
             // Get the state for UI rendering - using a non-blocking approach
-            let app_state = {
-                // Try to get a quick lock, if it fails just provide default values
-                if let Ok(state) = self.app_state.try_lock() {
-                    (state.is_connected, state.connecting, state.connection_status.clone())
-                } else {
-                    (false, false, "Locked".to_string())
-                }
-            };
+            // This was the old way, let's use the locked values from above
+            // let app_state_tuple = {
+            //     if let Ok(state) = self.app_state.try_lock() {
+            //         (state.is_connected, state.connecting, state.connection_status.clone())
+            //     } else {
+            //         (false, false, "Locked".to_string())
+            //     }
+            // };
             
             // Draw server configuration panel
             super::widgets::server_panel::draw_server_panel(
@@ -128,7 +142,8 @@ impl RcpClientApp {
             );
             
             // Only show the connection panel when connected
-            if app_state.0 {
+            // if app_state_tuple.0 { // Old way
+            if is_connected { // New way
                 super::widgets::connection_panel::draw_connection_panel(
                     ui,
                     &self.server_address,
@@ -138,6 +153,7 @@ impl RcpClientApp {
                     self.use_tls,
                     &self.event_tx,
                     &self.rt_handle,
+                    &self.app_state, // Pass Arc<Mutex<AppState>> directly
                 );
             }
             
@@ -153,47 +169,48 @@ impl RcpClientApp {
             );
             
             // For action panel, we need to create the handlers
-            let status_mutex = self.status.clone();
-            let mut update_status = move |status: String| {
-                if let Ok(mut status_guard) = status_mutex.try_lock() {
-                    *status_guard = status;
-                }
+            // These handlers (_update_status, _save_config, _connect, _disconnect) are unused as per warnings.
+            // They were intended for the old action_panel design. The new design uses event_tx.
+            // We can remove them if they are truly not used by any other part of app.rs.
+            // For now, prefixing them with underscore if they are defined here.
+            let _status_mutex = self.status.clone();
+            let _update_status = move |_status: String| {
+                // if let Ok(mut status_guard) = status_mutex.try_lock() {
+                //     *status_guard = status;
+                // }
             };
             
-            let mut save_config = || -> Result<()> {
-                // Config saving logic would go here
+            let _save_config = || -> Result<()> {
                 Ok(())
             };
             
-            let event_tx = self.event_tx.clone();
-            let connect = || {
-                let tx = event_tx.clone();
-                self.rt_handle.spawn(async move {
-                    let _ = tx.send(AppEvent::Connect).await;
-                });
+            let _event_tx_clone = self.event_tx.clone(); // Renamed to avoid conflict if original event_tx is used
+            let _connect = || {
+                // let tx = event_tx_clone.clone();
+                // self.rt_handle.spawn(async move {
+                //     let _ = tx.send(AppEvent::Connect).await;
+                // });
             };
             
-            let disconnect = || {
-                let tx = event_tx.clone();
-                self.rt_handle.spawn(async move {
-                    let _ = tx.send(AppEvent::Disconnect).await;
-                });
+            let _disconnect = || {
+                // let tx = event_tx_clone.clone();
+                // self.rt_handle.spawn(async move {
+                //     let _ = tx.send(AppEvent::Disconnect).await;
+                // });
             };
             
-            // Draw action panel
+            // Action Panel
             super::widgets::action_panel::draw_action_panel(
                 ui,
-                app_state.0, // is_connected
-                app_state.1, // connecting
-                &self.server_address,
-                &self.server_port,
-                &self.auth_method,
-                &self.event_tx,
-                &self.rt_handle,
-                &mut save_config,
-                &mut update_status,
-                &connect,
-                &disconnect,
+                &self.server_address, 
+                &self.server_port,   
+                &self.auth_method, 
+                &mut self.config.ui.auto_connect, 
+                &mut self.config.ui.auto_reconnect, 
+                is_connected, // Use locked value
+                is_connecting, // Use locked value
+                &status_message_from_state, // Use status from AppState for action panel
+                self.event_tx.clone(),
             );
         });
     }

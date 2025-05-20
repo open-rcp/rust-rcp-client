@@ -1,12 +1,11 @@
-
-mod event_app;
-mod gui;
 mod app;
+mod event_app;
 mod events;
-mod models;
+pub mod gui; // Make the gui module public
 mod history;
+mod models;
 mod widgets;
 
 pub use event_app::EventBasedApp;
-pub use app::run_gui;
 pub use app::App;
+ // Make all public items in gui module available

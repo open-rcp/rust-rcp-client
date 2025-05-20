@@ -86,11 +86,7 @@ pub fn draw_auth_panel(
                             // Try to lock without blocking
                             if let Ok(state) = state_mutex.try_lock() {
                                 show_password = state.show_password;
-                                password_display = if !show_password {
-                                    "•".repeat(state.password.len())
-                                } else {
-                                    state.password.clone()
-                                };
+                                password_display = state.password.clone();
                             } else {
                                 // If we can't get the lock, use default values
                                 show_password = false;
@@ -104,8 +100,8 @@ pub fn draw_auth_panel(
                                 .hint_text("Enter password")
                         );
                         
-                        // Update password in app state if needed
-                        if password_edit.changed() && show_password {
+                        // Update password in app state if needed - always update regardless of show_password
+                        if password_edit.changed() {
                             // Use non-blocking try_lock instead of block_on
                             if let Ok(mut state) = state_mutex.try_lock() {
                                 state.password = password_display.clone();
