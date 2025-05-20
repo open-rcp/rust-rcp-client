@@ -1,11 +1,11 @@
-use eframe::egui;
-use tokio::runtime::Handle;
-use tokio::sync::mpsc;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use crate::ui::events::AppEvent;
 use crate::ui::history::save_connection_history;
 use crate::ui::models::{AppState, ConnectionEntry};
+use eframe::egui;
+use std::sync::Arc;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 
 /// Draw the server configuration panel
 pub fn draw_server_panel(
@@ -36,15 +36,19 @@ pub fn draw_server_panel(
                                     "⚠ " // Warning for failed connections
                                 };
                                 let full_text = format!("{}{}", status_icon, display_text);
-                                
+
                                 if ui.selectable_label(false, full_text).clicked() {
                                     *server_address = entry.address.clone();
                                     *server_port = entry.port.clone();
                                 }
                             }
                         });
-                        
-                    if ui.button("🗑").on_hover_text("Clear connection history").clicked() {
+
+                    if ui
+                        .button("🗑")
+                        .on_hover_text("Clear connection history")
+                        .clicked()
+                    {
                         let mut history = connection_history.to_vec();
                         history.clear();
                         save_connection_history(&history);
@@ -52,28 +56,30 @@ pub fn draw_server_panel(
                 });
                 ui.add_space(5.0);
             }
-            
+
             // Server address with tooltip and validation
             ui.horizontal(|ui| {
                 ui.label("Address:");
                 let response = ui.text_edit_singleline(server_address);
-                
+
                 // Use methods directly on the response, but only call each method once
-                ui.label("").on_hover_text("Enter server hostname or IP address (Tab to navigate between fields)");
+                ui.label("").on_hover_text(
+                    "Enter server hostname or IP address (Tab to navigate between fields)",
+                );
                 let changed = response.changed();
                 let lost_focus = response.lost_focus();
-                
+
                 // Validate address and trigger async validation if needed
                 if !server_address.is_empty() {
                     let valid_address = !server_address.contains(' ');
                     if valid_address {
                         ui.colored_label(egui::Color32::GREEN, "✓");
-                        
+
                         // Check if we need to validate against the last validated address
                         if changed {
                             let state_mutex = app_state.clone();
                             let current_address = server_address.clone();
-                            
+
                             // Get last validated address using non-blocking approach
                             let needs_validation = if let Ok(state) = state_mutex.try_lock() {
                                 state.last_validated_address.as_deref() != Some(&current_address)
@@ -81,19 +87,21 @@ pub fn draw_server_panel(
                                 // If we can't get a lock, assume we need validation
                                 true
                             };
-                            
+
                             if needs_validation {
                                 // Update last validated address and trigger validation
                                 let tx = event_tx.clone();
                                 let address = server_address.clone();
-                                
+
                                 // Try to update without blocking
                                 if let Ok(mut state) = state_mutex.try_lock() {
                                     state.last_validated_address = Some(address.clone());
                                 }
-                                
+
                                 rt_handle.spawn(async move {
-                                    let _ = tx.send(AppEvent::ValidateInput("server_address".to_string())).await;
+                                    let _ = tx
+                                        .send(AppEvent::ValidateInput("server_address".to_string()))
+                                        .await;
                                 });
                             }
                         }
@@ -107,13 +115,14 @@ pub fn draw_server_panel(
                     ui.memory_mut(|mem| mem.request_focus(ui.next_auto_id()));
                 }
             });
-            
+
             // Port with validation
             ui.horizontal(|ui| {
                 ui.label("Port:");
                 let port_edit = ui.text_edit_singleline(server_port);
-                ui.label("").on_hover_text("Enter server port (usually 8717)");
-                
+                ui.label("")
+                    .on_hover_text("Enter server port (usually 8717)");
+
                 // Validate port
                 if !server_port.is_empty() {
                     match server_port.parse::<u16>() {
@@ -132,29 +141,32 @@ pub fn draw_server_panel(
                         }
                     }
                 }
-                
+
                 // Allow Enter to advance to next field
                 if port_edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                     // Move focus to the use TLS checkbox
                     ui.memory_mut(|mem| mem.request_focus(ui.next_auto_id()));
                 }
             });
-            
+
             // Option to use TLS
             ui.horizontal(|ui| {
                 ui.label("Use TLS encryption");
                 let checkbox = ui.checkbox(use_tls, "");
-                ui.label("🔒").on_hover_text("Secure the connection with TLS encryption");
-                
+                ui.label("🔒")
+                    .on_hover_text("Secure the connection with TLS encryption");
+
                 // Add more detailed explanation based on state
                 if *use_tls {
-                    ui.label("(Connection will be encrypted)")
-                        .on_hover_text("TLS provides secure, encrypted communication with the server");
+                    ui.label("(Connection will be encrypted)").on_hover_text(
+                        "TLS provides secure, encrypted communication with the server",
+                    );
                 } else {
-                    ui.label("(Connection will be unencrypted)")
-                        .on_hover_text("Warning: Unencrypted connections may expose sensitive data");
+                    ui.label("(Connection will be unencrypted)").on_hover_text(
+                        "Warning: Unencrypted connections may expose sensitive data",
+                    );
                 }
-                
+
                 // Allow keyboard navigation
                 if checkbox.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                     // Find the Username field in the Authentication section and focus it
