@@ -41,9 +41,9 @@ struct Args {
     #[clap(long, action)]
     event_based: bool,
     
-    /// Use graphical user interface
+    /// Use simple text-based interface instead of GUI
     #[clap(long, action)]
-    gui: bool,
+    no_gui: bool,
 }
 
 #[tokio::main]
@@ -99,25 +99,54 @@ async fn main() -> Result<()> {
         config.auth.method = auth_method;
     }
 
-    // Pass the background_connect flag to the UI
-    config.ui.auto_connect = !args.background_connect;
+    // Disable auto-connect on startup
+    config.ui.auto_connect = false;
+    
+    // Create a Tokio runtime handle for the GUI
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
+    let rt_handle = rt.handle().clone();
 
-    // Decide which UI implementation to use based on the command-line flags
-    if args.gui {
-        info!("Using graphical UI implementation");
-        // Initialize the GUI
-        ui::run_gui(config.clone(), !args.background_connect)?;
-    } else if args.event_based {
-        info!("Using event-based UI implementation");
-        // Initialize the event-based UI
-        let app = ui::EventBasedApp::new(config.clone(), !args.background_connect);
-        app.run().await?;
-    } else {
-        info!("Using simple UI implementation");
-        // Initialize the simple UI
-        let app = ui::App::new(config.clone())?;
-        app.run().await?;
-    }
+    // Create a shutdown channel for the GUI
+    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
+
+    // Use default options - we'll configure the font size in the app itself
+    let options = eframe::NativeOptions::default();
+    
+    // It's important that eframe::run_native is called on the main thread.
+    // The RcpClientApp::new method will spawn its own async tasks onto the provided rt_handle.
+    
+    // We need to run the eframe GUI on the main thread and the tokio runtime on a separate thread.
+    // However, RcpClientApp::new expects to be called from within a context where it can spawn tokio tasks.
+    // The simplest way is to ensure that eframe::run_native is the last call in main for the GUI path.
+    // The RcpClientApp itself will use the rt_handle to spawn its async logic.
+
+    // The main function is already a tokio::main, so we have a runtime.
+    // We can pass its handle directly.
+    
+    let app_config = config.clone(); // Clone config for the app
+
+    // Spawn a task to gracefully shutdown the runtime when the GUI exits
+    let _rt_handle_shutdown = rt.handle().clone();
+    tokio::spawn(async move {
+        let _ = shutdown_rx.await;
+        info!("GUI shutdown signal received, Tokio runtime will be shutdown if no other tasks are pending.");
+        // Dropping the runtime handle or the runtime itself if it was owned here would shut it down.
+        // Since rt is local to this block, it will be dropped when main exits or this block finishes.
+        // For a more explicit shutdown, one might use rt.shutdown_background() or rt.shutdown_timeout().
+    });
+
+    eframe::run_native(
+        "Rust RCP Client",
+        options,
+        Box::new(move |cc| {
+            // Create RcpClientApp within the eframe closure
+            // Pass the existing rt_handle from the main tokio runtime
+            Box::new(crate::ui::gui::RcpClientApp::new(cc, app_config, rt_handle, shutdown_tx))
+        }),
+    )
+    .map_err(|e| anyhow::anyhow!("eframe error: {}", e))?;
 
     Ok(())
 }

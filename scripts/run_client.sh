@@ -71,6 +71,11 @@ cargo build --release
 # Build the command line arguments
 ARGS=("--auth-method" "$AUTH_METHOD")
 
+# GUI is the default, only add --no-gui if GUI=false
+if [ "$GUI" = false ]; then
+  ARGS+=("--no-gui")
+fi
+
 if [ -n "$SERVER" ]; then
   ARGS+=("--server" "$SERVER")
 fi
@@ -91,9 +96,8 @@ if [ "$EVENT_BASED" = true ]; then
   ARGS+=("--event-based")
 fi
 
-if [ "$GUI" = true ]; then
-  ARGS+=("--gui")
-fi
+# Note: The GUI flag is now always included by default
+# The --gui flag parameter is now just used to show intent in the script
 
 # Run the client with the specified options
 echo "Running with options: ${ARGS[@]}"

@@ -12,7 +12,6 @@ mod transport;
 
 pub use error::ProtocolError;
 pub use message::{Message, MessageType};
-pub use response_handler::handle_response;
 pub use transport::Transport;
 
 /// Client connection to the RCP server

@@ -4,7 +4,6 @@ use std::path::Path;
 use tokio::fs;
 
 mod defaults;
-pub use defaults::*;
 
 /// Client configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,11 +80,20 @@ pub struct UiConfig {
     /// Whether to automatically connect on startup
     #[serde(default = "default_auto_connect")]
     pub auto_connect: bool,
+
+    /// Whether to automatically reconnect if the connection is lost
+    #[serde(default = "default_auto_reconnect")]
+    pub auto_reconnect: bool,
 }
 
 /// Default value for auto_connect
 fn default_auto_connect() -> bool {
-    true
+    false
+}
+
+/// Default value for auto_reconnect
+fn default_auto_reconnect() -> bool {
+    false
 }
 
 /// Load configuration from a file
@@ -164,7 +172,8 @@ impl Default for UiConfig {
             start_minimized: false,
             scale_factor: 1.0,
             theme: None,
-            auto_connect: true,
+            auto_connect: false, // Changed to false to disable auto-connect by default
+            auto_reconnect: false,
         }
     }
 }
