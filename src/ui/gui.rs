@@ -2,7 +2,9 @@
 use crate::config::ClientConfig;
 use crate::protocol;
 use crate::ui::events::AppEvent;
-use crate::ui::history::{add_to_connection_history, load_connection_history, save_connection_history}; // Added save_connection_history
+use crate::ui::history::{
+    add_to_connection_history, load_connection_history, save_connection_history,
+}; // Added save_connection_history
 use crate::ui::models::{AppState, ConnectionEntry};
 use eframe::egui;
 use std::sync::Arc;
@@ -18,7 +20,7 @@ pub struct RcpClientApp {
     password: String, // For UI binding if needed, auth_panel uses AppState.password for its logic
     token: String,    // For UI binding if needed
     psk_identity: String, // For UI binding if needed
-    psk_key: String,      // For UI binding if needed
+    psk_key: String,  // For UI binding if needed
     use_tls: bool,
     remember_credentials: bool,
     auto_connect: bool,
@@ -38,16 +40,16 @@ pub struct RcpClientApp {
 impl RcpClientApp {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
-        config: ClientConfig, 
+        config: ClientConfig,
         rt_handle: Handle,
-        shutdown_tx: oneshot::Sender<()>
+        shutdown_tx: oneshot::Sender<()>,
     ) -> Self {
         // Configure the egui context with larger text and improved styling
         let ctx = &cc.egui_ctx;
-        
+
         // Increase font size throughout the application
         ctx.set_pixels_per_point(1.3); // Increase UI scale by 30%
-        
+
         let (event_tx_async_to_gui, event_rx_gui) = mpsc::channel(100);
         let (event_tx_gui_to_async, event_rx_async) = mpsc::channel(100);
 
@@ -69,14 +71,14 @@ impl RcpClientApp {
         let app_state_clone = app_state.clone();
         let client_clone = client_arc.clone();
         let event_tx_for_async_logic = event_tx_async_to_gui.clone();
-    
-        let config_clone_for_async = config.clone(); 
+
+        let config_clone_for_async = config.clone();
         // Always disable auto-connect on startup
         let auto_connect_for_async = false; // Force disable auto-connect regardless of config
 
         rt_handle.spawn(async move {
             run_gui_inner(
-                config_clone_for_async, 
+                config_clone_for_async,
                 auto_connect_for_async,
                 event_tx_for_async_logic,
                 event_rx_async,
@@ -87,7 +89,7 @@ impl RcpClientApp {
             )
             .await;
         });
-        
+
         let loaded_history = load_connection_history();
 
         Self {
@@ -95,7 +97,7 @@ impl RcpClientApp {
             server_port: config.server.port.to_string(),
             auth_method: config.auth.method.clone(),
             username: config.auth.username.clone().unwrap_or_default(),
-            password: String::new(), 
+            password: String::new(),
             token: String::new(),
             psk_identity: String::new(),
             psk_key: String::new(),
@@ -106,8 +108,8 @@ impl RcpClientApp {
             status,
             app_state,
             client: client_arc,
-            event_tx: event_tx_gui_to_async, 
-            event_rx: Some(event_rx_gui),  
+            event_tx: event_tx_gui_to_async,
+            event_rx: Some(event_rx_gui),
             status_message: "Ready".to_string(),
             rt_handle,
             shutdown_tx: Some(shutdown_tx),
@@ -147,10 +149,10 @@ impl RcpClientApp {
                     &mut self.server_address,
                     &mut self.server_port,
                     &mut self.use_tls,
-                    &self.event_tx, 
-                    &self.rt_handle, 
-                    &self.connection_history, 
-                    &self.app_state, 
+                    &self.event_tx,
+                    &self.rt_handle,
+                    &self.connection_history,
+                    &self.app_state,
                 );
 
                 // Auth Panel (7 arguments)
@@ -161,7 +163,7 @@ impl RcpClientApp {
                     &mut self.remember_credentials,
                     &self.event_tx,
                     &self.rt_handle,
-                    &self.app_state
+                    &self.app_state,
                 );
             }
 
@@ -173,20 +175,21 @@ impl RcpClientApp {
             // For now, let's assume it should be called when connected, similar to action_panel.
             // If it's meant to be shown always, its parameters need to be available always.
             // The existing call had different parameters. Let's adjust the call to match its definition, assuming it's shown when connected.
-            if is_connected { // Assuming connection_panel is shown when connected
+            if is_connected {
+                // Assuming connection_panel is shown when connected
                 crate::ui::widgets::connection_panel::draw_connection_panel(
-                    ui,                                 
-                    &self.server_address,               
-                    &self.server_port,                  
-                    &self.username,                     
-                    &self.auth_method,                  
-                    self.use_tls,                       
-                    &self.event_tx,                     
-                    &self.rt_handle,                    
-                    &self.app_state                     
+                    ui,
+                    &self.server_address,
+                    &self.server_port,
+                    &self.username,
+                    &self.auth_method,
+                    self.use_tls,
+                    &self.event_tx,
+                    &self.rt_handle,
+                    &self.app_state,
                 );
             } else {
-                 crate::ui::widgets::connection_panel::draw_connection_panel_controls(
+                crate::ui::widgets::connection_panel::draw_connection_panel_controls(
                     ui,
                     &self.server_address, // Pass current server_address
                     &self.server_port,    // Pass current server_port
@@ -205,12 +208,12 @@ impl RcpClientApp {
                     &self.server_address,
                     &self.server_port,
                     &self.auth_method,
-                    &mut self.auto_connect, 
-                    &mut self.auto_reconnect, 
+                    &mut self.auto_connect,
+                    &mut self.auto_reconnect,
                     is_connected,
                     is_connecting,
                     &self.status_message,
-                    self.event_tx.clone(), 
+                    self.event_tx.clone(),
                 );
             }
 
@@ -226,7 +229,9 @@ impl RcpClientApp {
     fn handle_event(&mut self, event: AppEvent) {
         match event {
             AppEvent::Connect => {
-                println!("GUI: Connect event received, should be handled by async task via channel");
+                println!(
+                    "GUI: Connect event received, should be handled by async task via channel"
+                );
                 if let Ok(mut app_state_mg) = self.app_state.try_lock() {
                     app_state_mg.connecting = true;
                     app_state_mg.is_connected = false;
@@ -238,7 +243,9 @@ impl RcpClientApp {
                 }
             }
             AppEvent::Disconnect => {
-                println!("GUI: Disconnect event received, should be handled by async task via channel");
+                println!(
+                    "GUI: Disconnect event received, should be handled by async task via channel"
+                );
                 if let Ok(mut app_state_mg) = self.app_state.try_lock() {
                     app_state_mg.connecting = false;
                     app_state_mg.is_connected = false;
@@ -262,14 +269,14 @@ impl RcpClientApp {
                 }
 
                 add_to_connection_history(
-                    &mut self.connection_history, 
-                    &self.server_address, 
-                    &self.server_port, 
-                    Some(&self.username), 
+                    &mut self.connection_history,
+                    &self.server_address,
+                    &self.server_port,
+                    Some(&self.username),
                     &self.auth_method,
-                    true // successful
+                    true, // successful
                 );
-                save_connection_history(&self.connection_history); 
+                save_connection_history(&self.connection_history);
             }
             AppEvent::ConnectionFailed(reason) => {
                 println!("GUI: ConnectionFailed event received: {}", reason);
@@ -289,11 +296,11 @@ impl RcpClientApp {
                     &self.server_port,
                     Some(&self.username),
                     &self.auth_method,
-                    false // successful
+                    false, // successful
                 );
-                save_connection_history(&self.connection_history); 
+                save_connection_history(&self.connection_history);
             }
-            AppEvent::DisconnectedConfirmed => { 
+            AppEvent::DisconnectedConfirmed => {
                 println!("GUI: Confirmed Disconnected event received");
                 if let Ok(mut app_state_mg) = self.app_state.try_lock() {
                     app_state_mg.is_connected = false;
@@ -320,19 +327,52 @@ impl RcpClientApp {
                 }
             }
             AppEvent::ValidateInput(field) => {
-                println!("GUI: ValidateInput event received for field: {}. This is unexpected here.", field);
+                println!(
+                    "GUI: ValidateInput event received for field: {}. This is unexpected here.",
+                    field
+                );
             }
             // Placeholder arms for other AppEvent variants
-            AppEvent::AuthenticationSucceeded => {println!("GUI: AuthenticationSucceeded event - not fully handled yet.");}
-            AppEvent::AuthenticationFailed(reason) => {println!("GUI: AuthenticationFailed event: {} - not fully handled yet.", reason);}
-            AppEvent::ConfigSaved => {println!("GUI: ConfigSaved event - not fully handled yet.");}
-            AppEvent::ConfigSaveFailed(reason) => {println!("GUI: ConfigSaveFailed event: {} - not fully handled yet.", reason);}
-            AppEvent::UpdateConnectionState(is_connected) => {println!("GUI: UpdateConnectionState event: {} - not fully handled yet.", is_connected);}
-            AppEvent::SetConnecting(is_connecting) => {println!("GUI: SetConnecting event: {} - not fully handled yet.", is_connecting);}
-            AppEvent::UpdateConnectionHistory(..) => {println!("GUI: UpdateConnectionHistory event - not fully handled yet.");}
-            AppEvent::SaveCredentials => {println!("GUI: SaveCredentials event - not fully handled yet.");}
-            AppEvent::ClearCredentials => {println!("GUI: ClearCredentials event - not fully handled yet.");}
-            _ => { 
+            AppEvent::AuthenticationSucceeded => {
+                println!("GUI: AuthenticationSucceeded event - not fully handled yet.");
+            }
+            AppEvent::AuthenticationFailed(reason) => {
+                println!(
+                    "GUI: AuthenticationFailed event: {} - not fully handled yet.",
+                    reason
+                );
+            }
+            AppEvent::ConfigSaved => {
+                println!("GUI: ConfigSaved event - not fully handled yet.");
+            }
+            AppEvent::ConfigSaveFailed(reason) => {
+                println!(
+                    "GUI: ConfigSaveFailed event: {} - not fully handled yet.",
+                    reason
+                );
+            }
+            AppEvent::UpdateConnectionState(is_connected) => {
+                println!(
+                    "GUI: UpdateConnectionState event: {} - not fully handled yet.",
+                    is_connected
+                );
+            }
+            AppEvent::SetConnecting(is_connecting) => {
+                println!(
+                    "GUI: SetConnecting event: {} - not fully handled yet.",
+                    is_connecting
+                );
+            }
+            AppEvent::UpdateConnectionHistory(..) => {
+                println!("GUI: UpdateConnectionHistory event - not fully handled yet.");
+            }
+            AppEvent::SaveCredentials => {
+                println!("GUI: SaveCredentials event - not fully handled yet.");
+            }
+            AppEvent::ClearCredentials => {
+                println!("GUI: ClearCredentials event - not fully handled yet.");
+            }
+            _ => {
                 // log::debug!("Unhandled AppEvent in GUI: {:?}", event);
                 // Or, if certain events are not expected by the GUI handler directly:
                 // println!("GUI: Received an AppEvent that is not directly handled by the GUI's main event loop: {:?}", event);
@@ -373,20 +413,22 @@ impl eframe::App for RcpClientApp {
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         if let Some(tx) = self.shutdown_tx.take() {
-            let _ = tx.send(()).map_err(|e| eprintln!("Failed to send shutdown signal: {:?}", e));
+            let _ = tx
+                .send(())
+                .map_err(|e| eprintln!("Failed to send shutdown signal: {:?}", e));
         }
     }
 }
 
 async fn run_gui_inner(
-    _config: ClientConfig, 
-    auto_connect_initial: bool, 
-    event_tx_to_gui: mpsc::Sender<AppEvent>, 
-    mut event_rx_from_gui: mpsc::Receiver<AppEvent>, 
-    _rt_handle: Handle, 
-    status_arc: Arc<Mutex<String>>, 
-    app_state_arc: Arc<Mutex<AppState>>, 
-    _client_arc: Arc<Mutex<Option<protocol::Client>>> 
+    _config: ClientConfig,
+    auto_connect_initial: bool,
+    event_tx_to_gui: mpsc::Sender<AppEvent>,
+    mut event_rx_from_gui: mpsc::Receiver<AppEvent>,
+    _rt_handle: Handle,
+    status_arc: Arc<Mutex<String>>,
+    app_state_arc: Arc<Mutex<AppState>>,
+    _client_arc: Arc<Mutex<Option<protocol::Client>>>,
 ) {
     let (_shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
 
@@ -397,9 +439,9 @@ async fn run_gui_inner(
             // Use async lock here as we are in an async function
             let mut app_state = app_state_arc.lock().await;
             app_state.connecting = true;
-        } 
+        }
         if let Err(e) = event_tx_to_gui.send(AppEvent::Connect).await {
-             eprintln!("run_gui_inner: Failed to send initial Connect event: {}", e);
+            eprintln!("run_gui_inner: Failed to send initial Connect event: {}", e);
         }
     }
 
@@ -414,10 +456,10 @@ async fn run_gui_inner(
                         app_state_arc.lock().await.connecting = true;
                         status_arc.lock().await.clear();
                         status_arc.lock().await.push_str("Connecting...");
-                        
+
                         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await; // Shorter delay for testing
 
-                        let connected = true; 
+                        let connected = true;
                         if connected {
                             let mut app_state_locked = app_state_arc.lock().await;
                             app_state_locked.is_connected = true;

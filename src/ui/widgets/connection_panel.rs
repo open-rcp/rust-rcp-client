@@ -1,11 +1,11 @@
-use eframe::egui;
-use tokio::runtime::Handle;
-use tokio::sync::mpsc;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use crate::ui::events::AppEvent;
 use crate::ui::models::AppState;
+use eframe::egui;
+use std::sync::Arc;
 use std::time::UNIX_EPOCH;
+use tokio::runtime::Handle;
+use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 
 /// Draw the connection details panel (only shown when connected)
 pub fn draw_connection_panel(
@@ -19,9 +19,9 @@ pub fn draw_connection_panel(
     rt_handle: &Handle,
     app_state: &Arc<Mutex<AppState>>,
 ) {
-    // Calculate available width for responsive layout
+    // Calculate available width for responsive layou
     let available_width = ui.available_width();
-    
+
     // Container with a frame for better visual appearance
     egui::Frame::group(ui.style())
         .fill(ui.style().visuals.widgets.noninteractive.bg_fill)
@@ -37,19 +37,19 @@ pub fn draw_connection_panel(
                 } else {
                     egui::Color32::GOLD
                 };
-                
+
                 let status_circle = egui::RichText::new("●")
                     .color(status_color)
                     .size(16.0);
-                
+
                 ui.label(status_circle);
-                
+
                 // Header with connection info
                 let header = egui::RichText::new("Connection Details")
                     .size(18.0)
                     .strong();
                 ui.heading(header);
-                
+
                 // Add timestamp on the right if space permits
                 if available_width > 400.0 {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -71,17 +71,17 @@ pub fn draw_connection_panel(
                             // Fallback if we can't get a lock
                             "Just connected".to_string()
                         };
-                        
+
                         ui.label(format!("Connected since: {}", time_display));
                     });
                 }
             });
-            
+
             ui.add_space(4.0);
             ui.separator();
             ui.add_space(4.0);
-            
-            // Connection details in a responsive grid layout
+
+            // Connection details in a responsive grid layou
             egui::Grid::new("connection_details_grid")
                 .num_columns(2)
                 .spacing([available_width * 0.1, 8.0]) // Responsive spacing
@@ -100,7 +100,7 @@ pub fn draw_connection_panel(
                         ui.label(server_text);
                     });
                     ui.end_row();
-                    
+
                     // User info with icon
                     ui.horizontal(|ui| {
                         ui.label("👤");
@@ -111,7 +111,7 @@ pub fn draw_connection_panel(
                         ui.label(user_text);
                     });
                     ui.end_row();
-                    
+
                     // Authentication method with icon
                     ui.horizontal(|ui| {
                         ui.label("🔑");
@@ -122,7 +122,7 @@ pub fn draw_connection_panel(
                         ui.label(auth_text);
                     });
                     ui.end_row();
-                    
+
                     // Encryption status with icon
                     ui.horizontal(|ui| {
                         if use_tls {
@@ -132,17 +132,17 @@ pub fn draw_connection_panel(
                         }
                         ui.label("Encryption:");
                     });
-                    
+
                     if use_tls {
                         ui.horizontal(|ui| {
                             let secure_text = egui::RichText::new("TLS Encrypted")
                                 .color(egui::Color32::GREEN)
                                 .strong();
                             ui.label(secure_text);
-                            
+
                             let info_btn = ui.small_button("ℹ️");
                             if info_btn.clicked() {
-                                // Could show more details in a future enhancement
+                                // Could show more details in a future enhancemen
                             }
                             info_btn.on_hover_text("Your connection is secure with TLS encryption");
                         });
@@ -152,19 +152,19 @@ pub fn draw_connection_panel(
                                 .color(egui::Color32::GOLD)
                                 .strong();
                             ui.label(warning_text);
-                            
+
                             let warning_btn = ui.small_button("⚠️");
                             if warning_btn.clicked() {
-                                // Could show security warning in a future enhancement
+                                // Could show security warning in a future enhancemen
                             }
                             warning_btn.on_hover_text("Warning: Your connection is not encrypted. Your data may be vulnerable.");
                         });
                     }
                     ui.end_row();
                 });
-            
+
             ui.add_space(12.0);
-            
+
             // Bottom area with connection status and action buttons
             ui.horizontal(|ui| {
                 // Connection status indicator
@@ -174,7 +174,7 @@ pub fn draw_connection_panel(
                         .strong();
                     ui.label(status_text);
                 });
-                
+
                 // Push buttons to the right with horizontal spacing
                 let button_layout = if available_width > 320.0 {
                     // Wider layout with buttons side by side
@@ -183,23 +183,19 @@ pub fn draw_connection_panel(
                     // Narrower layout with buttons stacked
                     egui::Layout::top_down(egui::Align::RIGHT)
                 };
-                
+
                 ui.with_layout(button_layout, |ui| {
-                    // Disconnect button with visual styling
-                    let disconnect_button = egui::Button::new(
-                        egui::RichText::new("Disconnect")
+                    // Connection details button - replaced disconnect button
+                    let details_button = egui::Button::new(
+                        egui::RichText::new("Details")
                             .color(ui.visuals().widgets.active.fg_stroke.color)
                     )
-                    .fill(egui::Color32::from_rgb(220, 50, 50));
-                    
-                    if ui.add(disconnect_button).clicked() {
-                        // Send disconnect event
-                        let tx = event_tx.clone();
-                        rt_handle.spawn(async move {
-                            let _ = tx.send(AppEvent::Disconnect).await;
-                        });
+                    .fill(egui::Color32::from_rgb(80, 120, 200));
+
+                    if ui.add(details_button).clicked() {
+                        // Could show more detailed connection information in the future
                     }
-                    
+
                     // Optional refresh button if space allows
                     if available_width > 380.0 {
                         if ui.button("Refresh").clicked() {
@@ -247,22 +243,20 @@ pub fn draw_connection_panel_controls(
             let button_color = if is_connecting {
                 egui::Color32::from_rgb(200, 200, 100) // Yellow for connecting
             } else if inputs_valid {
-                egui::Color32::from_rgb(100, 150, 255) // Blue for ready to connect
+                egui::Color32::from_rgb(100, 150, 255) // Blue for ready to connec
             } else {
                 egui::Color32::from_rgb(180, 180, 180) // Gray for disabled
             };
 
             let connect_response = ui.add_enabled(
                 !is_connecting && inputs_valid,
-                egui::Button::new(
-                    egui::RichText::new(connect_button_text)
-                        .size(18.0)
-                        .color(if inputs_valid || is_connecting {
-                            egui::Color32::WHITE
-                        } else {
-                            egui::Color32::GRAY
-                        }),
-                )
+                egui::Button::new(egui::RichText::new(connect_button_text).size(18.0).color(
+                    if inputs_valid || is_connecting {
+                        egui::Color32::WHITE
+                    } else {
+                        egui::Color32::GRAY
+                    },
+                ))
                 .fill(button_color)
                 .min_size(egui::Vec2::new(120.0, 32.0)),
             );
@@ -278,14 +272,18 @@ pub fn draw_connection_panel_controls(
                     // Consider if SaveConfig should be sent here too, like in action_panel.
                     tokio::spawn(async move {
                         if let Err(e) = tx.send(AppEvent::Connect).await {
-                            log::error!("Failed to send connect event from connection_panel_controls: {}", e);
+                            log::error!(
+                                "Failed to send connect event from connection_panel_controls: {}",
+                                e
+                            );
                         }
                     });
                 }
             }
-            
+
             let tooltip_text = if !inputs_valid {
-                "Please enter a valid server address and port in the Server Configuration panel.".to_string()
+                "Please enter a valid server address and port in the Server Configuration panel."
+                    .to_string()
             } else if is_connecting {
                 "Attempting to connect...".to_string()
             } else {

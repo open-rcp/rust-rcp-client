@@ -2,14 +2,14 @@ use crate::config::ClientConfig;
 use crate::protocol;
 use anyhow::Result;
 use eframe::{self, egui};
-use log::{info, error};
+use log::{error, info};
 use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex, oneshot};
 use tokio::runtime::Handle;
+use tokio::sync::{mpsc, oneshot, Mutex};
 
-use super::models::{AppState, ConnectionEntry};
 use super::events::AppEvent;
 use super::history::load_connection_history;
+use super::models::{AppState, ConnectionEntry};
 
 /// Simple wrapper for the legacy App interface
 pub struct App {
@@ -73,19 +73,19 @@ pub struct RcpClientApp {
 impl RcpClientApp {
     /// Create a new application instance
     pub fn new(
-        config: ClientConfig, 
-        auto_connect: bool, 
-        rt_handle: Handle, 
-        shutdown_tx: oneshot::Sender<()>
+        config: ClientConfig,
+        auto_connect: bool,
+        rt_handle: Handle,
+        shutdown_tx: oneshot::Sender<()>,
     ) -> Self {
         let (event_tx, _event_rx) = mpsc::channel(32);
         let client = Arc::new(Mutex::new(None));
         let status = Arc::new(Mutex::new("Disconnected".to_string()));
         let app_state = Arc::new(Mutex::new(AppState::new()));
-        
+
         // Load connection history
         let connection_history = load_connection_history();
-        
+
         // Initialize app instance
         Self {
             config: config.clone(),
@@ -118,7 +118,7 @@ impl RcpClientApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("RCP Client");
             ui.separator();
-            
+
             // Get the state for UI rendering - using a non-blocking approach
             // This was the old way, let's use the locked values from above
             // let app_state_tuple = {
@@ -128,7 +128,7 @@ impl RcpClientApp {
             //         (false, false, "Locked".to_string())
             //     }
             // };
-            
+
             // Draw server configuration panel
             super::widgets::server_panel::draw_server_panel(
                 ui,
@@ -140,10 +140,11 @@ impl RcpClientApp {
                 &self.connection_history,
                 &self.app_state,
             );
-            
+
             // Only show the connection panel when connected
             // if app_state_tuple.0 { // Old way
-            if is_connected { // New way
+            if is_connected {
+                // New way
                 super::widgets::connection_panel::draw_connection_panel(
                     ui,
                     &self.server_address,
@@ -156,7 +157,7 @@ impl RcpClientApp {
                     &self.app_state, // Pass Arc<Mutex<AppState>> directly
                 );
             }
-            
+
             // Draw authentication panel
             super::widgets::auth_panel::draw_auth_panel(
                 ui,
@@ -167,7 +168,7 @@ impl RcpClientApp {
                 &self.rt_handle,
                 &self.app_state,
             );
-            
+
             // For action panel, we need to create the handlers
             // These handlers (_update_status, _save_config, _connect, _disconnect) are unused as per warnings.
             // They were intended for the old action_panel design. The new design uses event_tx.
@@ -179,11 +180,9 @@ impl RcpClientApp {
                 //     *status_guard = status;
                 // }
             };
-            
-            let _save_config = || -> Result<()> {
-                Ok(())
-            };
-            
+
+            let _save_config = || -> Result<()> { Ok(()) };
+
             let _event_tx_clone = self.event_tx.clone(); // Renamed to avoid conflict if original event_tx is used
             let _connect = || {
                 // let tx = event_tx_clone.clone();
@@ -191,24 +190,24 @@ impl RcpClientApp {
                 //     let _ = tx.send(AppEvent::Connect).await;
                 // });
             };
-            
+
             let _disconnect = || {
                 // let tx = event_tx_clone.clone();
                 // self.rt_handle.spawn(async move {
                 //     let _ = tx.send(AppEvent::Disconnect).await;
                 // });
             };
-            
+
             // Action Panel
             super::widgets::action_panel::draw_action_panel(
                 ui,
-                &self.server_address, 
-                &self.server_port,   
-                &self.auth_method, 
-                &mut self.config.ui.auto_connect, 
-                &mut self.config.ui.auto_reconnect, 
-                is_connected, // Use locked value
-                is_connecting, // Use locked value
+                &self.server_address,
+                &self.server_port,
+                &self.auth_method,
+                &mut self.config.ui.auto_connect,
+                &mut self.config.ui.auto_reconnect,
+                is_connected,               // Use locked value
+                is_connecting,              // Use locked value
                 &status_message_from_state, // Use status from AppState for action panel
                 self.event_tx.clone(),
             );
@@ -219,14 +218,14 @@ impl RcpClientApp {
 impl eframe::App for RcpClientApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.update_ui(ctx);
-        
+
         // Request a repaint at a reasonable framerate
         ctx.request_repaint_after(std::time::Duration::from_millis(100));
     }
-    
+
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         info!("Application exiting");
-        
+
         // Send shutdown signal
         if let Some(tx) = self.shutdown_tx.take() {
             let _ = tx.send(());
@@ -240,10 +239,10 @@ pub fn run_gui(config: ClientConfig, auto_connect: bool) -> Result<()> {
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
-    
+
     // Store the runtime handle for global access
     let rt_handle = rt.handle().clone();
-    
+
     // Initialize native options
     let mut options = eframe::NativeOptions::default();
     options.default_theme = if config.ui.dark_mode {
@@ -252,14 +251,14 @@ pub fn run_gui(config: ClientConfig, auto_connect: bool) -> Result<()> {
         eframe::Theme::Light
     };
     options.centered = true;
-    
+
     // Set up a channel for shutdown notification
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
-    
+
     // Clone config for moving into the closure
     let config_clone = config.clone();
     let auto_connect_clone = auto_connect;
-    
+
     // Spawn a thread to run the tokio runtime
     std::thread::spawn(move || {
         rt.block_on(async {
@@ -268,7 +267,7 @@ pub fn run_gui(config: ClientConfig, auto_connect: bool) -> Result<()> {
             info!("GUI application shutdown complete");
         });
     });
-    
+
     // Create and run the application
     match eframe::run_native(
         "RCP Client",
@@ -280,8 +279,13 @@ pub fn run_gui(config: ClientConfig, auto_connect: bool) -> Result<()> {
             } else {
                 egui::Visuals::light()
             });
-            
-            Box::new(RcpClientApp::new(config_clone, auto_connect_clone, rt_handle, shutdown_tx))
+
+            Box::new(RcpClientApp::new(
+                config_clone,
+                auto_connect_clone,
+                rt_handle,
+                shutdown_tx,
+            ))
         }),
     ) {
         Ok(_) => Ok(()),

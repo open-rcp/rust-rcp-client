@@ -40,7 +40,7 @@ struct Args {
     /// Use event-based UI implementation
     #[clap(long, action)]
     event_based: bool,
-    
+
     /// Use simple text-based interface instead of GUI
     #[clap(long, action)]
     no_gui: bool,
@@ -101,7 +101,7 @@ async fn main() -> Result<()> {
 
     // Disable auto-connect on startup
     config.ui.auto_connect = false;
-    
+
     // Create a Tokio runtime handle for the GUI
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -113,10 +113,10 @@ async fn main() -> Result<()> {
 
     // Use default options - we'll configure the font size in the app itself
     let options = eframe::NativeOptions::default();
-    
+
     // It's important that eframe::run_native is called on the main thread.
     // The RcpClientApp::new method will spawn its own async tasks onto the provided rt_handle.
-    
+
     // We need to run the eframe GUI on the main thread and the tokio runtime on a separate thread.
     // However, RcpClientApp::new expects to be called from within a context where it can spawn tokio tasks.
     // The simplest way is to ensure that eframe::run_native is the last call in main for the GUI path.
@@ -124,7 +124,7 @@ async fn main() -> Result<()> {
 
     // The main function is already a tokio::main, so we have a runtime.
     // We can pass its handle directly.
-    
+
     let app_config = config.clone(); // Clone config for the app
 
     // Spawn a task to gracefully shutdown the runtime when the GUI exits
@@ -143,7 +143,12 @@ async fn main() -> Result<()> {
         Box::new(move |cc| {
             // Create RcpClientApp within the eframe closure
             // Pass the existing rt_handle from the main tokio runtime
-            Box::new(crate::ui::gui::RcpClientApp::new(cc, app_config, rt_handle, shutdown_tx))
+            Box::new(crate::ui::gui::RcpClientApp::new(
+                cc,
+                app_config,
+                rt_handle,
+                shutdown_tx,
+            ))
         }),
     )
     .map_err(|e| anyhow::anyhow!("eframe error: {}", e))?;

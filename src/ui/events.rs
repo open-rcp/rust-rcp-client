@@ -1,4 +1,3 @@
-
 /// GUI Application events
 #[derive(Debug, Clone)]
 pub enum AppEvent {

@@ -1,5 +1,5 @@
-use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 
 /// Application state
 #[derive(Debug, Clone, Default)] // Added Default
@@ -25,7 +25,7 @@ impl AppState {
             connection_time: None,
         }
     }
-    
+
     /// Record the connection time
     pub fn set_connected(&mut self, connected: bool) {
         self.is_connected = connected;
@@ -68,13 +68,13 @@ impl ConnectionEntry {
             successful: false,
         }
     }
-    
+
     /// Mark connection as successful
     pub fn mark_successful(&mut self) {
         self.successful = true;
         self.last_connected = SystemTime::now();
     }
-    
+
     /// Format connection as a display string
     pub fn display_string(&self) -> String {
         if let Some(ref username) = self.username {

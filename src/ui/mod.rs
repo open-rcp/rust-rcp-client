@@ -6,6 +6,6 @@ mod history;
 mod models;
 mod widgets;
 
-pub use event_app::EventBasedApp;
 pub use app::App;
- // Make all public items in gui module available
+pub use event_app::EventBasedApp;
+// Make all public items in gui module available
