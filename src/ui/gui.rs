@@ -128,7 +128,7 @@ impl RcpClientApp {
 
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.heading("Rust RCP Client");
+                ui.heading("RCP Client");
                 ui.separator();
                 if ui.button("Save Config").clicked() {
                     if let Err(e) = self.event_tx.try_send(AppEvent::SaveConfig) {

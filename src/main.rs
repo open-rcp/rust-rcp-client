@@ -138,7 +138,7 @@ async fn main() -> Result<()> {
     });
 
     eframe::run_native(
-        "Rust RCP Client",
+        "RCP Client",
         options,
         Box::new(move |cc| {
             // Create RcpClientApp within the eframe closure
